@@ -15,6 +15,8 @@ import re
 # way to create tables using DataFrame that can be written into DB).
 
 # ------changelog -------
+# version 5 moves most of testing inside a function for better reusuability and reminds how many tests already done today
+# version 4 limits the multiplication to focus on table for 2 or 3
 # version 3 prints encouraging messages if the performance was 100% in 4 out of 6 last attempts
 # version 2 has better error handling by using 'try and except ValueError' within math
 # version 1 is for 20 math questions while keeping track of time taken to answer
@@ -29,15 +31,6 @@ range2=17
 
 #let's keep on asking for the name until it is entered exactly as expected by using 'while true' and break
 #only if matching name is entered, but not do the same in case of math type being not 1 or 2 or 3.
-
-todaydate = time.strftime("%c")[4:10]
-print(todaydate)
-sequence = ['Monday', 'Tuesday', 'Wednesday','Friday']
-for i in sequence:
-    if re.search(todaydate,i) is not None:
-        print("Found it")
-print(time.strftime("%Y-%m-%d"))
-print((pd.to_datetime('Today') - pd.Timedelta('1 days')))
 
 
 while True:
@@ -55,6 +48,7 @@ while True:
 
                 df2 = df2.tail(20)                                   #last 20 rows should have yesterday's performance
                 #print(df2.loc[data['date'].str.contains('2018-03-17')])
+                print(df2)
 
                 Todate = time.strftime("%Y-%m-%d")
                 yesterdate = (pd.to_datetime('Today') - pd.Timedelta('1 days')).strftime("%Y-%m-%d")
@@ -91,6 +85,7 @@ while True:
                         print("###########################################")
                 else:                                                       #if it is not the first test of the day, then
                     print("Remember, we need to finish 3 additions and 3 substractions with 100%..")
+
 
 
             except (RuntimeError, TypeError, NameError):
@@ -151,6 +146,9 @@ if int(math)==1 or 2 or 3 :                                          #input() re
                         print('Please enter a valid number')
 
         elif int(math)==3 :                                           # if multiplication is chosen
+            x1 = random.randint(2, 3)                                 # let's focus on table of 2 or 3
+            y1 = random.randint(0, 11)
+
             z1 = x1 * y1
             while True:
                 try:
@@ -171,8 +169,11 @@ if int(math)==1 or 2 or 3 :                                          #input() re
         else:                                                         # if incorrect answer
             b += 1
             print('\t\t Incorrect, Correct Answer is {}'.format(z1))
+
     endGameTime = time.time()
+
     Percent = format((a/(a+b))*100, '.2f')                                              #limit float to 2 decimal points
+
     if Percent == format(100,'.2f'):                                                    # if all correct
         print('############################\n')
         print('\t {}, You rock :-)'.format(name))
