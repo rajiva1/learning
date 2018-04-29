@@ -15,17 +15,18 @@ import re
 # way to create tables using DataFrame that can be written into DB).
 
 # ------changelog -------
-# version 5 introduces 2 functions for testing and checking past performance for better reusuability
-# version 5 also reminds how many tests already done today by a given user and prompts to continue until user says No
-# version 4 limits the multiplication to focus on table for 2 or 3
-# version 3 prints encouraging messages if the performance was 100% in 4 out of 6 last attempts
-# version 2 has better error handling by using 'try and except ValueError' within math
-# version 1 is for 20 math questions while keeping track of time taken to answer
+# v7 fixes the second bug that occurred due to copy paste error for counting multiplication tests
+# v6 fixes the very first bug that occurred due to functions that got introduced in v5
+# v5 introduces 2 functions for testing and checking past performance for better reusuability
+# v5 also reminds how many tests already done today by a given user and prompts to continue until user says No
+# v4 limits the multiplication to focus on table for 2 or 3
+# v3 prints encouraging messages if the performance was 100% in 4 out of 6 last attempts
+# v2 has better error handling by using 'try and except ValueError' within math
+# v1 is for 20 math questions while keeping track of time taken to answer
 
 
-names = ['R1', 'R2','R3','R4']
+names = ['Rishik', 'Ria', 'Rajiv', 'Richa', 'Raghav', 'Aadya', 'Ratnabh', 'Ritisha', 'Veda', 'Om']
 calculation = ['nil','addition','subtraction','multiplication']
-
 
 
 def check_last_performance(name):
@@ -41,7 +42,7 @@ def check_last_performance(name):
         try:                                                    #do all of the below unless any failure
             df2 = pd.read_sql('SELECT attempt, date, calculation, score, TotalTime from Math WHERE name=?', conn, params=[name], index_col='attempt')
 
-            df2 = df2.tail(10)                                   #last 10 rows should have all of last time's performance
+            df2 = df2.tail(20)                                   #last 20 rows should have all of last time's performance
             #print(df2.loc[data['date'].str.contains('2018-03-17')])
 
             Todate = time.strftime("%Y-%m-%d")
@@ -57,6 +58,8 @@ def check_last_performance(name):
 
                 x=y=z=0
 
+                #Logic Issue here - this for loop checks for 100% score over last many days, instead of just yesterday
+
                 for index, row in df2.iterrows():                           #iterrow() returns a series, let's check row by row
                     #print(row)
                     if row['calculation'] == calculation[1]:                #note that iterrow() doesnt preserve dtypes across rows
@@ -66,9 +69,9 @@ def check_last_performance(name):
                         if row['score'] == "100.00":
                             y = y + 1
                     elif row['calculation'] == calculation[3]:
-                        if row['score'] == 100.00:
+                        if row['score'] == "100.00":
                             z = z + 1
-                if x >= 2 or y >=2 or z >=2:
+                if x >= 2 and y >=2 or z >=1:
                     print("###########################################")
                     print("{}, You rocked with 100% score last time. Very impressive. ".format(name))
                     print("###########################################")
@@ -77,19 +80,23 @@ def check_last_performance(name):
                     print("###########################################")
                     print("{}, You gotta score 100% in at least 2 tests today. You ready?".format(name))
                     print("###########################################")
-            else:                                                       #if it is not the first test of the day, then
+
+            else:                                                       #if it is not the first test of the day, then find test taken so far
+                #count number of rows that match test type e.g. addition and that match today's date, match on date first to minimize
+
                 add_test_no = len(df2[(df2['date'] == Todate) & (df2['calculation'] == 'addition')])
                 sub_test_no = len(df2.loc[(df2['date'] == Todate) & (df2['calculation'] == 'subtraction')])    #this also works
-                mul_test_no = len(df2[(df2['date'] == Todate) & (df2['calculation'] == 'addition')])
+                mul_test_no = len(df2[(df2['date'] == Todate) & (df2['calculation'] == 'multiplication')])
 
-                print("{}, Good that you want to continue. So far, You have finished,".format(name))
+                print("{}, Good that you want to continue. So far, You have finished::".format(name))
                 print("\t {} of 3 additions,".format(add_test_no))
                 print("\t {} of 3 substractions,".format(sub_test_no))
                 print("\t {} of 3 multiplications,".format(mul_test_no))
+
                 if add_test_no == 3 and sub_test_no == 3 and mul_test_no ==3:
-                    print("You are done already. Have fun.")
+                    print("You are done already. Feel free to do something else and Have fun.")
                 else:
-                    print("You need to finish up quickly.")
+                    print("You are doing great. Now, finish 3 or more of each quickly.")
 
 
 
@@ -105,11 +112,17 @@ def math_test(name):
 
     a = b = z = 0
     maxT = minT = 60
-    range1 = 2
-    range2 = 17
+
+    if name == names[1]:  # If one needs to practice for smaller numbers
+        # print('{}, You did great yesterday..'.format(name))
+        range1 = 1
+        range2 = 10
+    else:
+        range1 = 5
+        range2 = 40
 
     startGameTime = time.time()
-    for x in range(20):                                              # Number of questions is 20
+    for x in range(2):                                              # Number of questions is 20
         x1 = random.randint(range1,range2)
         y1 = random.randint(range1,range2)
         startTime = time.time()
@@ -144,7 +157,7 @@ def math_test(name):
                         print('Please enter a valid number')
 
         elif int(math)==3 :                                           # if multiplication is chosen
-            x1 = random.randint(2, 3)                                 # let's focus on table of 2 or 3
+            x1 = random.randint(2, 4)                                 # let's focus on table of 2 or 3
             y1 = random.randint(0, 11)
 
             z1 = x1 * y1
@@ -228,16 +241,12 @@ def math_test(name):
 while True:
     name = input('Welcome, Enter your name: ')                      #input() always returns a string
 
-    #progress only if name is already in the list
+    #progress only if name is already in the list, otherwise keep asking
     if name in names:
 
-        if name == names[1]:  # If one needs to practice for smaller numbers
-            # print('{}, You did great yesterday..'.format(name))
-            range1 = 1
-            range2 = 8
-
-        # Let's find out about the last performance per calculation and encourage before test starts
+        # keep testing until student wants to quick by not typing 'y'
         while True:
+            # Let's find out about the last performance per calculation and encourage before test starts
             check_last_performance(name)
             math_test(name)
             ans = input('\n{}, Do you want to continue (y/n): '.format(name))
