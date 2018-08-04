@@ -9,13 +9,16 @@ import pandas as pd
 import sqlite3
 import re
 
-# This program is intended to help kids practice with 3 types of math exercises:
-#               - addition, subtraction, multiplication
-# This version is hardcoded for certain student names, 20 questions per test per exercise type, and
-# using SQLITE DataBase with pandas package (since it gives us a much faster way to create tables
-# using DataFrame that can be written into DataBase).
+"""
+This program is intended to help kids practice with 4 types of math exercises:
+               - addition, subtraction, multiplication and division
+This version is hardcoded for certain student names, 10 questions per test per exercise type, and
+using SQLITE DataBase with pandas package (since it gives us a much faster way to create tables
+using DataFrame that can be written into DataBase).
+"""
 
 # ------changelog -------
+# v10 properly includes the division (though v9 had added it unofficially and incorrectly) and fixes 2 errors
 # v9 adjusts the date & time to Eastern timezone even if server time is set to another timezone
 # v8 enhances check_last_performance function to show score per attempt, if 100%
 # v7 fixes the second bug that occurred due to a copy paste error for counting multiplication tests
@@ -28,9 +31,9 @@ import re
 # v1 is for 20 math questions while keeping track of time taken to answer
 
 
-names = ['Rishik', 'Ria', 'Rajiv', 'Richa', 'Raghav', 'Aadya', 'Ratnabh', 'Ritisha', 'Veda', 'Om']
+names = ['X1', 'X2', 'X3']
 calculation = ['nil','addition','subtraction','multiplication', 'division']
-
+num_of_questions = 1
 
 def check_last_performance(name):
     """This function connects to the sql DB and reads the pertinent data from table for further analysis.
@@ -108,10 +111,10 @@ def check_last_performance(name):
                 #print(df2[0:2].values)                                 # print values of first 2 rows of dataframe
                 if any(df2.date == yesterdate):
                     print("\n {}, I remember you finishing your math yesterday. Good job.".format(name))
-                    if x2 >= 2 and y2 >= 2 or z2 >= 1 or zz2 >= 1:
-                        print("###########################################")
+                    if x2 >= 2 and y2 >= 2 or z2 >= 2 or zz2 >= 2:
+                        print("##########################################################")
                         print("And You rocked with 100% score yesterday. Very impressive, {}.".format(name))
-                        print("###########################################")
+                        print("############################################################")
                         print("Ready to rock again?")
                         return(1)
                     else:
@@ -122,6 +125,7 @@ def check_last_performance(name):
 
                 else:
                     print("Oh, {} I missed you yesterday. Please dont forget me again.".format(name))
+                    print("###########################################################")
 
             else:                                                       #if it is not the first test of the day, then find test taken so far
                 #count number of rows that match test type e.g. addition and that match today's date, match on date first to minimize
@@ -135,16 +139,16 @@ def check_last_performance(name):
                 print("\t {} of 3 additions with 100% score in {} of them,".format(add_test_no, x1))
                 print("\t {} of 3 subtractions with 100% score in {} of them,".format(sub_test_no, y1))
                 print("\t {} of 3 multiplications with 100% score in {} of them,".format(mul_test_no, z1))
-                print("\t {} of 3 Divisions with 100% score in {} of them,".format(mul_test_no, z1))
+                print("\t {} of 3 divisions with 100% score in {} of them,".format(div_test_no, zz1))
 
-                if add_test_no == 3 and sub_test_no == 3 and mul_test_no == 3 and div_test_no == 3:
-                    print("You are done already. Feel free to do something else and Have fun.")
+                if add_test_no >= 3 and sub_test_no >= 3 and mul_test_no >= 3 and div_test_no >= 3:
+                    print("{}, You are done already. Feel free to do something else and Have fun.".format(name))
                     ans = input('\n{}, Do you want to quit (y/n): '.format(name))
                     if ans == 'y' or 'yes' or 'Y':
                         exit()
 
                 else:
-                    print("You are doing great. Now, finish 3 or more of each quickly.")
+                    print("You are doing great. Now, quickly finish 3 or more of each with 100% score.")
                     return(0)
 
 
@@ -156,6 +160,11 @@ def check_last_performance(name):
 
 
 def math_test(name, flag):
+    """
+    This function lets the student pick a specific calculation type, and then takes two random numbers from two separate
+    ranges (hardcoded) and presents them to the student to answer. Also, hardcoded is the number of questions.
+    It then compares the answer
+    """
     # Ask to select math type
     math = input('\n Alright {}, Press 1 for Addition, 2 for Subtraction, 3 for Multiplication, 4 for Division: '.format(name))
 
@@ -174,7 +183,7 @@ def math_test(name, flag):
             range2 = range2 + 10
 
     startGameTime = time.time()
-    for x in range(2):                                              # Number of questions is 20
+    for x in range(num_of_questions):
         x1 = random.randint(range1,range2)
         y1 = random.randint(range1,range2)
         startTime = time.time()
@@ -208,7 +217,7 @@ def math_test(name, flag):
                         print('Please enter a valid number')
 
         elif int(math) == 3:                                           # if multiplication is chosen
-            x1 = random.randint(2, 6)                                 # let's focus on table of 2 or 3
+            x1 = random.randint(2, 6)                                 # let's focus on table of upto 6
             y1 = random.randint(0, 11)
 
             z1 = x1 * y1
@@ -220,23 +229,17 @@ def math_test(name, flag):
                     print('Please enter a valid number')
 
         elif int(math) == 4:                                           # In division, bigger number is divided by smaller number
-            if x1 >= y1 :
-                z1 = x1 / y1
-                while True:
-                    try:
-                        z = int(input('{})  {} / {} = '.format(x + 1, x1, y1)))
-                        break                                        # if a valid integer is entered, then exit
-                    except (ValueError):                             # blank or alphabets not allowed, go back
-                        print('Please enter a valid number')
+            x1 = random.randint(2, 6)                                 # let's focus on table of upto 6
+            z1 = random.randint(0, 11)
+            y1 = x1 * z1
 
-            elif y1 > x1 :
-                z1 = y1 / x1
-                while True:
-                    try:
-                        z = int(input('{})  {} / {} = '.format(x + 1, y1, x1)))
-                        break
-                    except ValueError:                              # blank or alphabets not allowed, go back
-                        print('Please enter a valid number')
+            while True:
+                try:
+                    z = int(input('{}) {} ÷ {} = '.format(x+1,y1,x1)))
+                    break
+                except ValueError:
+                    print('Please enter a valid number')
+
 
         else:
             print('sorry, you should have chosen 1 or 2 or 3 or 4. Try again')
