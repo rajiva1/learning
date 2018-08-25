@@ -7,7 +7,9 @@ from datetime import datetime, timedelta
 from pytz import timezone
 import pandas as pd
 import sqlite3
-import re
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 """
 This program is intended to help kids practice with 4 types of math exercises:
@@ -18,7 +20,8 @@ using DataFrame that can be written into DataBase).
 """
 
 # ------changelog -------
-# v10 properly includes the division (though v9 had added it unofficially and incorrectly) and fixes 2 errors
+# v11 includes sending a mail/text message once 3 of each math type completed with score details in email body
+# v10 properly includes the division (though v9 had added it unofficially and incorrectly)
 # v9 adjusts the date & time to Eastern timezone even if server time is set to another timezone
 # v8 enhances check_last_performance function to show score per attempt, if 100%
 # v7 fixes the second bug that occurred due to a copy paste error for counting multiplication tests
@@ -31,9 +34,36 @@ using DataFrame that can be written into DataBase).
 # v1 is for 20 math questions while keeping track of time taken to answer
 
 
+print("\t.....Welcome to Version 11.....\n")
 names = ['X1', 'X2', 'X3']
 calculation = ['nil','addition','subtraction','multiplication', 'division']
 num_of_questions = 1
+
+def send_emails(name, flag, body):
+    """This function sends an email once the exercises are completed
+    Flag is set to 1 only if $name had scored 100% in 2 or more them
+    body would have math score breakdown per math calculation type
+    """
+    fromaddr = "xyz1@xyz.com"
+    list = "xyz@xyz.com","xyz2@xyz.com"
+    msg = MIMEMultipart()
+    msg['From'] = fromaddr
+    #msg['To'] = toaddr
+    if flag == 1:
+        msg['Subject'] = "{} finished math: 100% in >8 sets".format(name)
+    else:
+        msg['Subject'] = "{} finished math: 100% in <8 sets".format(name)
+    #body = "{} finished math".format(name)
+    msg.attach(MIMEText(body, 'plain'))
+    text = msg.as_string()
+
+    server = smtplib.SMTP('mail.mail.com', 587)
+    server.starttls()
+    server.login('login','password')
+    for toaddr in (list):                                           #need to send email one by one due to a smtplib issue
+        server.sendmail(fromaddr, toaddr, text)
+    server.quit()
+
 
 def check_last_performance(name):
     """This function connects to the sql DB and reads the pertinent data from table for further analysis.
@@ -67,7 +97,6 @@ def check_last_performance(name):
             else:
                 Todate = time.strftime("%Y-%m-%d")
                 yesterdate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-                print(Todate)
 
             #print(type(yesterdate))                                #it should be string type, but let's check
 
@@ -116,16 +145,18 @@ def check_last_performance(name):
                         print("And You rocked with 100% score yesterday. Very impressive, {}.".format(name))
                         print("############################################################")
                         print("Ready to rock again?")
-                        return(1)
+                        return(1,0,0)
                     else:
                         print("###########################################")
                         print("{}, You were close to rocking with 100% score yesterday. You gotta rock today. You ready?".format(name))
                         print("###########################################")
+                        return(0,0,0)
 
 
                 else:
                     print("Oh, {} I missed you yesterday. Please dont forget me again.".format(name))
                     print("###########################################################")
+                    return(0,0,0)
 
             else:                                                       #if it is not the first test of the day, then find test taken so far
                 #count number of rows that match test type e.g. addition and that match today's date, match on date first to minimize
@@ -135,21 +166,39 @@ def check_last_performance(name):
                 mul_test_no = len(df2[(df2['date'] == Todate) & (df2['calculation'] == 'multiplication')])
                 div_test_no = len(df2[(df2['date'] == Todate) & (df2['calculation'] == 'division')])
 
-                print("{}, Good that you want to continue. So far, You have finished::".format(name))
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                print("{}, So far, You have finished::".format(name))
                 print("\t {} of 3 additions with 100% score in {} of them,".format(add_test_no, x1))
                 print("\t {} of 3 subtractions with 100% score in {} of them,".format(sub_test_no, y1))
                 print("\t {} of 3 multiplications with 100% score in {} of them,".format(mul_test_no, z1))
                 print("\t {} of 3 divisions with 100% score in {} of them,".format(div_test_no, zz1))
 
-                if add_test_no >= 3 and sub_test_no >= 3 and mul_test_no >= 3 and div_test_no >= 3:
-                    print("{}, You are done already. Feel free to do something else and Have fun.".format(name))
-                    ans = input('\n{}, Do you want to quit (y/n): '.format(name))
-                    if ans == 'y' or 'yes' or 'Y':
-                        exit()
-
+                if name == names[1]:
+                    if add_test_no >=3 and sub_test_no >=3:
+                        print("{}, You are done with 3 of each. Did you rock in at least 3 of them?".format(name))
+                        print("\tIf yes, then quit and do something else and be Happy :-).")
+                        print("\tIf No, then you may please continue and rock :-).")
+                        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                        email_body = "\n{} of 3 additions with 100% score in {} of them," \
+                               "\n{} of 3 subtractions with 100% score in {} of them," \
+                               "\n{} of 3 multiplications with 100% score in {} of them,".format(add_test_no, x1, sub_test_no, y1,mul_test_no, z1)
+                        return (1,1,email_body)
                 else:
-                    print("You are doing great. Now, quickly finish 3 or more of each with 100% score.")
-                    return(0)
+                    if add_test_no >= 3 and sub_test_no >= 3 and mul_test_no >= 3 and div_test_no >= 3:
+                        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                        print("{}, You are done with 3 of each. Did you get 100% in at least 3 of them?".format(name))
+                        print("\tIf yes, then quit and do something else and be Happy :-).")
+                        print("\tIf No, then you may please continue and rock :-).")
+                        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                        email_body = "\n{} of 3 additions with 100% score in {} of them," \
+                               "\n{} of 3 subtractions with 100% score in {} of them," \
+                               "\n{} of 3 multiplications with 100% score in {} of them" \
+                               "\n{} of 3 divisions with 100% score in {} of them,".format(add_test_no, x1, sub_test_no, y1, mul_test_no, z1, div_test_no, zz1)
+
+                        return(1,1,email_body)
+
+                print("You are doing great. Now, quickly finish 3 or more of each with 100% score.")
+                return(0,0,0)
 
 
         except (RuntimeError, TypeError, NameError):
@@ -157,6 +206,7 @@ def check_last_performance(name):
             print('Learn more about error handling here - https://docs.python.org/3/tutorial/errors.html')
         except:
             print('Oops, DB didnt have Math table, or table didnt have a column, or something went wrong in logic')
+
 
 
 def math_test(name, flag):
@@ -173,14 +223,17 @@ def math_test(name, flag):
 
     if name == names[1]:   #If one needs to practice for smaller numbers, then change the range
         range1 = 1
-        range2 = 10
+        range2 = 15
+        range3 = 2
+        print('Ria, you may skip division for now')
     else:
         range1 = 5
         range2 = 50
+        range3 = 10
         if flag == 1:
             print("Flag is {},".format(flag))
             range1 = range1 + 1
-            range2 = range2 + 10
+            range2 = range2 + 1
 
     startGameTime = time.time()
     for x in range(num_of_questions):
@@ -217,7 +270,7 @@ def math_test(name, flag):
                         print('Please enter a valid number')
 
         elif int(math) == 3:                                           # if multiplication is chosen
-            x1 = random.randint(2, 6)                                 # let's focus on table of upto 6
+            x1 = random.randint(2, range3)                             # let's focus on table of upto 10
             y1 = random.randint(0, 11)
 
             z1 = x1 * y1
@@ -229,7 +282,7 @@ def math_test(name, flag):
                     print('Please enter a valid number')
 
         elif int(math) == 4:                                           # In division, bigger number is divided by smaller number
-            x1 = random.randint(2, 6)                                 # let's focus on table of upto 6
+            x1 = random.randint(2, range3)                                 # let's focus on table of upto 6
             z1 = random.randint(0, 11)
             y1 = x1 * z1
 
@@ -333,17 +386,22 @@ while True:
 
     """progress only if name is already in the list, otherwise keep asking"""
     if name in names:
+        flag = done = email_body = 0
 
         """ keep testing until student wants to quit by not typing 'y'. """
         while True:
             # Let's find out about the last performance per calculation and encourage before test starts
-            flag = 0
-            flag = check_last_performance(name)
-            math_test(name, flag)
-            ans = input('\n{}, Do you want to continue (y/n): '.format(name))
-            if ans != 'y':
-                break
+            flag, done, email_body = check_last_performance(name)
+            #print('done value is {}'.format(done))
+            if done == 1:
+                ans = input('\n{}, Do you want to Quit (y/n): '.format(name))
+                if ans == 'y':
+                    """notify by sending an email/txt, since completed """
+                    send_emails(name, flag, email_body)
+                    print("Your report has been sent via Email. See you tomorrow. Have fun.")
+                    exit()
 
-        break                                                       # to come out of if loop
+            math_test(name, flag)
+
     else:
         print('\t\n Please enter the name that is in the list\n')
